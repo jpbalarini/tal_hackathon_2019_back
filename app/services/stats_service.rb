@@ -47,6 +47,15 @@ class StatsService
           "bool": {
             "must": [
               {
+                "has_parent": {
+                  "parent_type": "dealer",
+                  "query": {
+                    "match_all": {}
+                  },
+                  "inner_hits": {}
+                }
+              },
+              {
                 "range": {
                   "stats.last_seen": {
                     "gte": "now-#{days_ago}d/d",

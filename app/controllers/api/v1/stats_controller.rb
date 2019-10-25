@@ -9,6 +9,6 @@ class Api::V1::StatsController < ApplicationController
 
   def stats_params
     params.permit(:year, :make, :model, :max_turn_over, :days_ago,
-      :precision, :bottom_right, :top_left, :routing, :size)
+      :precision, :bottom_right, :top_left, :routing, :size, :show_stats)
   end
 end

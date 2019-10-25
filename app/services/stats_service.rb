@@ -3,10 +3,14 @@ class StatsService
 
   class << self
     def get(year: nil, make: nil, model: nil, top_left: nil, bottom_right: nil,
-      max_turn_over: 100, days_ago: 30, precision: 3, routing: nil, size: 0)
+      max_turn_over: 100, days_ago: 30, precision: 3, routing: nil, size: 0, show_stats: false)
       precision = 12 if precision.to_i > 12
       precision = 1 if precision.to_i < 1
-      q = query(year, make, model, max_turn_over, days_ago, precision, top_left, bottom_right, routing, size)
+      if show_stats
+        q = query(year, make, model, max_turn_over, days_ago, precision, top_left, bottom_right, routing, size)
+      else
+        q = query_stats(year, make, model, max_turn_over, days_ago, precision, top_left, bottom_right, routing, size)
+      end
       res = ElasticsearchService.client.search(index: INDEX, body: q, request_cache: true)
       puts res
       return res
@@ -43,6 +47,10 @@ class StatsService
     def query(year, make, model, max_turn_over, days_ago, precision, top_left, bottom_right, routing, size)
       query = {
         "size": size,
+        "sort": [
+          { "stats.last_seen": {"order": "desc"} },
+          "_score"
+        ],
         "query": {
           "bool": {
             "must": [
@@ -83,6 +91,44 @@ class StatsService
       query_make(query, make)
       # query_max_turn_over(query, max_turn_over)
       query
+    end
+
+    def query_stats(year, make, model, max_turn_over, days_ago, precision, top_left, bottom_right, routing, size)
+      query = {
+        "query": {
+          "has_child": {
+            "type": "vehicle",
+            "query": {
+              "bool": {
+                "must": [
+                  {
+                    "range": {
+                      "stats.last_seen": {
+                        "gte": "now-#{days_ago}d/d",
+                        "lt": "now/d"
+                      }
+                    }
+                  },
+                  {
+                    "range": {
+                      "stats.total_days": {
+                        "gt": "1"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "score_mode": "sum",
+            "inner_hits": {}
+          }
+        }
+      }
+      query_complete_data(query[:query][:has_child])
+      query_filter_bounding_box(query[:query][:has_child], top_left, bottom_right)
+      query_year(query[:query][:has_child], year)
+      query_model(query[:query][:has_child], model)
+      query_make(query[:query][:has_child], make)
     end
 
     def query_routing(query, routing)

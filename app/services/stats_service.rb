@@ -7,9 +7,9 @@ class StatsService
       precision = 12 if precision.to_i > 12
       precision = 1 if precision.to_i < 1
       if show_stats
-        q = query(year, make, model, max_turn_over, days_ago, precision, top_left, bottom_right, routing, size)
-      else
         q = query_stats(year, make, model, max_turn_over, days_ago, precision, top_left, bottom_right, routing, size)
+      else
+        q = query(year, make, model, max_turn_over, days_ago, precision, top_left, bottom_right, routing, size)
       end
       res = ElasticsearchService.client.search(index: INDEX, body: q, request_cache: true)
       puts res
@@ -129,6 +129,7 @@ class StatsService
       query_year(query[:query][:has_child], year)
       query_model(query[:query][:has_child], model)
       query_make(query[:query][:has_child], make)
+      query
     end
 
     def query_routing(query, routing)
